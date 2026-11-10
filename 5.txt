@@ -1,0 +1,109 @@
+#include <IRremote.hpp>
+
+const int LED = 4;
+const int IR_PIN = 2;
+
+bool ledState = false;
+bool blinkMode = false;
+
+unsigned long lastBlink = 0;
+
+// Общая функция обработки команд
+void executeCommand(String command) {
+
+  if (command == "ON") {
+    blinkMode = false;
+    ledState = true;
+    Serial.println("LED ON");
+  }
+
+  else if (command == "OFF") {
+    blinkMode = false;
+    ledState = false;
+    Serial.println("LED OFF");
+  }
+
+  else if (command == "STATUS") {
+    Serial.print("LED: ");
+    Serial.println(ledState ? "ON" : "OFF");
+  }
+
+  else if (command == "MODE") {
+    blinkMode = !blinkMode;
+    Serial.println(blinkMode ? "BLINK" : "MANUAL");
+  }
+
+  else {
+    Serial.println("Unknown command");
+  }
+}
+
+void setup() {
+  pinMode(LED, OUTPUT);
+
+  Serial.begin(9600);
+  Serial.setTimeout(50);
+
+  IrReceiver.begin(IR_PIN, ENABLE_LED_FEEDBACK);
+
+  Serial.println("System ready!");
+  Serial.println("Commands: ON OFF STATUS MODE");
+}
+
+void loop() {
+
+  // 1. Получаем команды через Serial
+  if (Serial.available() > 0) {
+
+    String command = Serial.readStringUntil('\n');
+
+    command.trim();
+    command.toUpperCase();
+
+    executeCommand(command);
+  }
+
+  // 2. Получаем команды через ИК-пульт
+  if (IrReceiver.decode()) {
+
+    uint8_t command = IrReceiver.decodedIRData.command;
+
+    Serial.print("IR code: ");
+    Serial.println(command, HEX);
+
+    if (!(IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT)) {
+
+      switch (command) {
+
+        case 0x30: // Кнопка 1
+          executeCommand("ON");
+          break;
+
+        case 0x18: // Кнопка 2
+          executeCommand("OFF");
+          break;
+
+        case 0x7A: // Кнопка 3
+          executeCommand("STATUS");
+          break;
+
+        case 0x10: // Кнопка 4
+          executeCommand("MODE");
+          break;
+      }
+    }
+
+    IrReceiver.resume();
+  }
+
+  // 3. Режим мигания через millis
+  if (blinkMode && millis() - lastBlink >= 500) {
+
+    lastBlink = millis();
+
+    ledState = !ledState;
+  }
+
+  // 4. Обновляем светодиод
+  digitalWrite(LED, ledState);
+}
