@@ -1,0 +1,56 @@
+#define TRIG 9;
+#define ECHO = 10;
+
+#define GREEN = 2;
+#define YELLOW = 3;
+#define RED = 4;
+#define BUZZER = 8;
+
+void setup() {
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+  pinMode(GREEN, OUTPUT);
+  pinMode(YELLOW, OUTPUT);
+  pinMode(RED, OUTPUT);
+  pinMode(BUZZER, OUTPUT);
+
+  Serial.begin(9600);
+}
+
+void loop() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  unsigned long duration = pulseIn(ECHO, HIGH, 30000UL);
+
+  if (duration == 0) {
+    Serial.println("No echo");
+    digitalWrite(GREEN, LOW);
+    digitalWrite(YELLOW, LOW);
+    digitalWrite(RED, LOW);
+    noTone(BUZZER);
+    delay(100);
+    return;
+  }
+
+  float distance = duration / 58.0;
+
+  Serial.print("Distance: ");
+  Serial.println(distance);
+
+  digitalWrite(GREEN, distance >= 50);
+  digitalWrite(YELLOW, distance >= 20 && distance < 50);
+  digitalWrite(RED, distance < 20);
+
+  if (distance < 20) {
+    tone(BUZZER, 1000);
+  } else {
+    noTone(BUZZER);
+  }
+
+  delay(100);
+}
